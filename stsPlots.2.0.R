@@ -21,7 +21,7 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
   rn$HQReadLength <- rn$HQRegionEnd - rn$HQRegionStart
 
   
-  # PAGE 1:  ReadScore heatmap 
+ # PAGE 1:  ReadScore heatmap 
   rn$BinnedReadScore <- round_any(rn$ReadScore, 0.75, floor)
 
   instructions <- "Confirm an even distribution\nof pass / fail Readscores."
@@ -30,12 +30,14 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
   
   d <- ggplot(rn, aes(x=X, y=Y)) + geom_tile(aes(fill=factor(BinnedReadScore))) +
       scale_fill_manual(values=c("red", "yellow"), name="Binned Readscore") +
-      opts(title="ReadScore Heatmap : Loading / Alignment Metric") +
-      coord_cartesian(xlim=c(-175,250)) +
+      labs(title="ReadScore Heatmap : Loading / Alignment Metric") +
+      coord_cartesian(xlim=c(-175,250)) + theme(legend.position = c(0.1,0.9)) +
       annotate(geom='text', x=240, y=-170, vjust=0, hjust=1,label=annotation) +  
       annotate(geom='text', x=240, y=240, vjust=1, hjust=1,label=instructions)   
 
   show(d)
+
+  print("plot 1 done")
 
 
   # PAGE 2:  Productivity heatmap 
@@ -51,33 +53,35 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
   annotation <- paste(prod0Pct, '\n', prod1Pct, '\n', prod2Pct, '\n', activePct, sep="")
   
   d <- ggplot(rn, aes(x=X, y=Y)) + geom_tile(aes(fill=factor(Productivity))) +
-      scale_fill_manual(values=c("red","yellow","blue"),name="Productivity") +
-      opts(title="Productivity Heatmap : Loading Metric") +
-      coord_cartesian(xlim=c(-175,250)) +
+      scale_fill_manual(values=c("red","yellow","blue"), name="Productivity") +
+      labs(title="Productivity Heatmap : Loading Metric") +
+      coord_cartesian(xlim=c(-175,250)) + theme(legend.position = c(0.1,0.9)) +
       annotate(geom='text', x=240, y=min(rn$Y), vjust=0, hjust=1,label=annotation) +
       annotate(geom='text', x=240, y=max(rn$Y), vjust=1, hjust=1,label=instructions)
   
   show(d)
+  print("plot 2 done")
 
   
   # PAGE 3: ReadScore Distribution vs. Productivity
-  
+
   d <- ggplot(subset(rn, rn$ReadScore > 0.1), aes(ReadScore, fill=factor(Productivity))) +
          geom_bar() +
          scale_fill_hue(name="Productivity") +
-         opts(title="ReadScore Distribution by Productivity : Sequencing Quality Metric") +
+         labs(title="ReadScore Distribution by Productivity : Sequencing Quality Metric") +
 	 geom_vline(xintercept = 0.75, color="red") +
-         facet_grid(Productivity~.)  
+         facet_grid(Productivity~.) + theme(legend.position = c(0.1,0.9)) 
 
   show(d)
+  print("plot 3 done")
 
-
-  # PAGE 4: HQReadLength boxplot 
+ # PAGE 4: HQReadLength boxplot 
   p <- ggplot(rn[rn$ReadScore > 0.1,], aes(x=factor(round_any(HQReadLength, 500)), y=ReadScore, color=as.factor(Productivity))) +
-       opts(axis.text.x=theme_text(angle=-90, hjust=0), title="ReadScore Distribution by HQ Readlength : Sequencing Quality Metric") +
-       geom_boxplot(outlier.size=0) + xlab("Binned HQ ReadLength") +
+       labs(title="ReadScore Distribution by HQ Readlength : Sequencing Quality Metric") + theme(axis.text.x=element_text(angle=-90, hjust=0)) +
+       geom_boxplot(outlier.size=0) + xlab("Binned HQ ReadLength") + theme(legend.position = c(0.9,0.15)) +
        scale_colour_hue(name="Productivity") 
   show(p)
+  print("plot 4 done")
 
   
   # PAGE 5:Comparison of raw vs HQ region only readlength distributions - How much of the sequencing-zmw data is crap?
@@ -86,28 +90,28 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
   instructions <- "A large discrepancy between raw and\nHQ read lengths indicates noisy ZMWs.\n\nCompare HQ read length plot to expected\n readlength values for your movie length."
 
   p <- qplot(data=subset(hq, hq$ReadScore > 0.1), x=value, geom='freqpoly', color=Raw_vs_HQ_RL ) +
-    xlab("Length in Bases") +
-    ylab("Counts") +
-    opts(title="Raw vs HQ Region Readlength Distributions : Sequencing Quality Metric") +
-    scale_colour_hue(name="Raw vs. HQ Readlength") +
+    labs(x="Length in Bases", y="Counts", title="Raw vs HQ Region Readlength Distributions : Sequencing Quality Metric") +
+    scale_colour_hue(name="Raw vs. HQ Readlength")  + theme(legend.position = c(0.9,0.9)) +
     annotate(geom='text', x=max(hq$value), y=0, vjust=0, hjust=1,label=instructions)
 
   show(p)
+  print("plot 5 done")
 
   
-  # PAGE 6: What fraction of called bases are in an HQ region?
+ # PAGE 6: What fraction of called bases are in an HQ region?
   rn$HQFraction <- rn$HQReadLength / rn$NumBases
   instructions <- "A large discrepancy between raw and\nHQ readlengths indicates noisy ZMWs."
   p <- qplot(data=subset(rn, ReadScore > 0.1), x=HQFraction, geom='histogram') +
     xlab("Fraction of Called Bases that are in an HQRegion") +
     ylab("Counts") +
-    opts(title="Per ZMW Sequencing / Noise Ratio") +
+    labs(title="Per ZMW Sequencing / Noise Ratio") +
     annotate(geom='text', x=0, y=500, vjust=0, hjust=0, label=instructions)
 
   show(p)
+  print("plot 6 done")
 
   
-  # PAGE 7: SNR heatmap
+   # PAGE 7: SNR heatmap
   mb <- melt(rn, measure.var=c("SnrMean_T", "SnrMean_G", "SnrMean_A", "SnrMean_C"), id.var=c("X", "Y", "ZmwType", "ReadScore"))
   q1 <- quantile(subset(mb, ZmwType=="SEQUENCING")$value, 0.01, na.rm=TRUE)
   q99 <- quantile(mb$value, 0.99, na.rm=TRUE)
@@ -118,22 +122,23 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
     scale_fill_gradientn(colours = rainbow(7))
   
   show(p)
-  
+  print("plot 7 done")
+
 
   # PAGE 8: SNR distributions
-  #instructions <- "MINIMUM: Channel T > 4, Channel A > 5.5\nOPTIMUM: Channel T 4.5-7, Channel A 7-10\n(FCR, IMT chips)"
   instructions <- data.frame(variable=c('SnrMean_T','SnrMean_G','SnrMean_A','SnrMean_C'), Annotation=c('Minimum: 4.0\nOptimum: 4.5-7', '','Minimum: 5.5\nOptimum: 7-10',''))
 
   p <- qplot(data=subset(mb, ReadScore > 0.1), x=value, geom='freqpoly', color=variable) +
     xlab("ZMW Mean SNR") + ylab("Counts") +
-    opts(title="Per Channel Mean SNR Distribution")  +
+    labs(title="Per Channel Mean SNR Distribution")  +
     facet_wrap(~variable) + coord_cartesian(xlim=c(0,16)) +
     scale_x_continuous(breaks=seq(2,14,2)) +
-    scale_colour_hue(name="Channel SNR") +
+    scale_colour_hue(name="Channel SNR")  + theme(legend.position = c(0.1,0.9)) +
     geom_text(aes(label=Annotation), data=instructions, x=1, y=0, vjust=0, hjust=0, show_guide=FALSE)
   
   show(p)
-  
+  print("plot 8 done")
+ 
   
   # PAGE 9: IPD histogram : oxygen exclusion test
 
@@ -149,6 +154,7 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
     annotate(geom='text', x=max(prod$BaseIpd), y=0, vjust=0, hjust=1,label=annotation)
   
   show(p)
+  print("plot 9 done")
 
   dev.off()
 }
