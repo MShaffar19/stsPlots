@@ -3,7 +3,7 @@
 # Author: Meredith Ashby, Lawrence Lee
 # Date: 5/12
 # Revised 04/12 to accomodate changes in R V2.14.2 and higher, ggplot2_0.9.0, and the replacement of reshape with reshape2
-#
+# Revised 12/12 to more robustly handle low quality SMRTcell data
 # Description: These are a set of plots generated from the sts.csv file that help in assessing loading of the SMRTcell and pre-mapping quality.
 
 library(ggplot2)
@@ -61,18 +61,13 @@ generateStsPlots <- function(stsCsvPath, pdfOutPath) {
 
   
   # PAGE 3: ReadScore Distribution vs. Productivity
-  passFilterProd0 <- paste(format(sum(rn$ReadScore >= 0.75 & rn$Productivity == 0) / sum(rn$ReadScore >=0.75) * 100, digits=4), "% Prod=0 ZMWs passed filter", sep="")
-  passFilterProd1 <- paste(format(sum(rn$ReadScore >= 0.75 & rn$Productivity == 1) / sum(rn$ReadScore >=0.75) * 100, digits=4), "% Prod=1 ZMWs passed filter", sep="")
-  passFilterProd2 <- paste(format(sum(rn$ReadScore >= 0.75 & rn$Productivity == 2) / sum(rn$ReadScore >=0.75) * 100, digits=4), "% Prod=2 ZMWs passed filter", sep="")
-  passFilter <- data.frame(Productivity=c('0','1','2'), ReadScore=c(0.7, 0.7, 0.7), count=c(0,0,0), Annotation=c(passFilterProd0, passFilterProd1, passFilterProd2))
-
+  
   d <- ggplot(subset(rn, rn$ReadScore > 0.1), aes(ReadScore, fill=factor(Productivity))) +
          geom_bar() +
          scale_fill_hue(name="Productivity") +
          opts(title="ReadScore Distribution by Productivity : Sequencing Quality Metric") +
 	 geom_vline(xintercept = 0.75, color="red") +
-         facet_grid(Productivity~.) +
-         geom_text(data=passFilter, aes(label=Annotation, x=ReadScore, y=count), vjust=0, hjust=0) 
+         facet_grid(Productivity~.)  
 
   show(d)
 
